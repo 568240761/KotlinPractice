@@ -6,7 +6,8 @@ import kotlinx.coroutines.*
  * 取消与异常#2
  *
  * 如果一个协程遇到了 CancellationException 以外的异常，它将使用该异常取消它的父协程。
- * 这个行为无法被覆盖，并且用于为结构化的并发（structured concurrency） 提供稳定的协程层级结构。 CoroutineExceptionHandler 的实现并不是用于子协程。
+ * 这个行为无法被覆盖，并且用于为结构化的并发（structured concurrency） 提供稳定的协程层级结构。
+ * CoroutineExceptionHandler 的实现并不是用于子协程。
  */
 
 //在本例中，CoroutineExceptionHandler 总是被设置在由 GlobalScope 启动的协程中。

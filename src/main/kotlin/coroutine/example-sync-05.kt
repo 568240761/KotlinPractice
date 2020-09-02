@@ -39,6 +39,7 @@ fun main() = runBlocking {
             // 用锁保护每次自增
             mutex.withLock {
                 counter5++
+                println("counter=$counter5")
             }
         }
     }

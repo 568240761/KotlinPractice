@@ -15,6 +15,8 @@ fun main() = runBlocking {
         val child = launch {
             try {
                 delay(Long.MAX_VALUE)
+            }catch (e:Exception){
+                e.printStackTrace()
             } finally {
                 println("Child is cancelled")
             }

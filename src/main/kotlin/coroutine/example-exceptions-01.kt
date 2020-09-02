@@ -1,9 +1,6 @@
 package coroutine
 
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.async
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.*
 
 /**
  * 异常的传播
@@ -15,13 +12,21 @@ import kotlinx.coroutines.runBlocking
  * 而后者则依赖用户来最终消费异常，例如通过 await 或 receive
  */
 fun main() = runBlocking {
-    val job = GlobalScope.launch { // launch 根协程
-        println("Throwing exception from launch")
-        throw IndexOutOfBoundsException() // 我们将在控制台打印 Thread.defaultUncaughtExceptionHandler
+    var job: Job? = null
+    try {
+        job = GlobalScope.launch {
+            // launch 根协程
+            println("Throwing exception from launch")
+            throw IndexOutOfBoundsException() // 我们将在控制台打印 Thread.defaultUncaughtExceptionHandler
+        }
+    } catch (e: Exception) {
+        println("catch exception")//这并没有捕获到异常
+        e.printStackTrace()
     }
-    job.join()
+    job?.join()
     println("Joined failed job")
-    val deferred = GlobalScope.async { // async 根协程
+    val deferred = GlobalScope.async {
+        // async 根协程
         println("Throwing exception from async")
         throw ArithmeticException() // 没有打印任何东西，依赖用户去调用等待
     }
