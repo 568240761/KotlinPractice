@@ -1266,6 +1266,170 @@ inline var bar: Bar
 为了消除这种由非公有 API 变更引入的不兼容的风险，公有 API 内联函数体内不允许使用非公有声明，即，不允许使用 private 与 internal 声明。
 
 一个 internal 声明可以由 @PublishedApi 标注，这会允许它在公有 API 内联函数中使用。当一个 internal 内联函数标记有 @PublishedApi 时，也会像公有函数一样检测其函数体。
+## 集合
+集合分为只读类型和可变类型。
+- 只读：List、Set、Map
+- 可变：MutableList、MutableSet、MutableMap
+
+![Kotlin 集合接口的图](img/collections.png)
+
+在 Kotlin 中，List 的默认实现是 ArrayList，Set的默认实现LinkedHashSet（保留元素插入的顺序），Map 的默认实现 LinkedHashMap（保留元素插入的顺序）。
+```kotlin
+val numbersMap = mapOf("key1" to 1, "key2" to 2, "key3" to 3, "key4" to 1)
+```
+注意，to 符号创建了一个短时存活的 Pair 对象，因此建议仅在性能不重要时才使用它。 为避免过多的内存使用，请使用其他方法。例如，可以创建可写 Map 并使用写入操作填充它，apply() 函数可以帮助保持初始化流畅。
+```kotlin
+val numbersMap = mutableMapOf<String, String>().apply { this["one"] = "1"; this["two"] = "2" }
+```
+可以创建没有任何元素的集合的函数：emptyList()、emptySet() 与 emptyMap()。
+
+### 复制
+通过集合复制函数，例如toList()、toMutableList()、toSet() 等等，创建了集合的快照。 结果是创建了一个具有相同元素的新集合，如果在源集合中添加或删除元素，则不会影响副本。副本也可以独立于源集合进行更改。但是相同元素的复制操作是浅复制的，所以集合元素所做的更改会反映在其副本中。
+```kotlin
+val sourceList = mutableListOf(1, 2, 3)
+val copyList = sourceList.toMutableList()
+val readOnlyCopyList = sourceList.toList()
+sourceList.add(4)
+println("Copy size: ${copyList.size}")  
+
+//readOnlyCopyList.add(4)             // 编译异常
+println("Read-only copy size: ${readOnlyCopyList.size}")
+```
+这些函数还可用于将集合转换为其他类型，例如根据 List 构建 Set，反之亦然。
+```kotlin
+val sourceList = mutableListOf(1, 2, 3)    
+val copySet = sourceList.toMutableSet()
+copySet.add(3)
+copySet.add(4)    
+println(copySet)
+```
+### 迭代器
+对于遍历集合元素， Kotlin 标准库支持迭代器的常用机制——对象可按顺序提供对元素的访问权限，而不会暴露集合的底层结构。 当需要逐个处理集合的所有元素（例如打印值或对其进行类似更新）时，迭代器非常有用。
+
+Iterable<T> 接口的继承者（包括 Set 与 List）可以通过调用 iterator() 函数获得迭代器。 一旦获得迭代器，它就指向集合的第一个元素；调用 next() 函数将返回此元素，并将迭代器指向下一个元素（如果下一个元素存在）。 一旦迭代器通过了最后一个元素，它就不能再用于检索元素；也无法重新指向到以前的任何位置。要再次遍历集合，请创建一个新的迭代器。
+```kotlin
+val numbers = listOf("one", "two", "three", "four")
+val numbersIterator = numbers.iterator()
+while (numbersIterator.hasNext()) {
+    println(numbersIterator.next())
+}
+```
+遍历 Iterable 集合的另一种方法是众所周知的 for 循环。在集合中使用 for 循环时，将隐式获取迭代器。因此，以下代码与上面的示例等效：
+```kotlin
+val numbers = listOf("one", "two", "three", "four")
+for (item in numbers) {
+    println(item)
+}
+```
+最后，有一个好用的 forEach() 函数，可自动迭代集合并为每个元素执行给定的代码。因此，等效的示例如下所示：
+```kotlin
+val numbers = listOf("one", "two", "three", "four")
+numbers.forEach {
+    println(it)
+}
+```
+#### List 迭代器
+对于列表，有一个特殊的迭代器实现： ListIterator 它支持列表双向迭代：正向与反向。 反向迭代由 hasPrevious() 和 previous() 函数实现。 此外， ListIterator 通过 nextIndex() 与 previousIndex() 函数提供有关元素索引的信息。
+```kotlin
+val numbers = listOf("one", "two", "three", "four")
+val listIterator = numbers.listIterator()
+while (listIterator.hasNext()) listIterator.next()
+println("Iterating backwards:")
+while (listIterator.hasPrevious()) {
+    print("Index: ${listIterator.previousIndex()}")
+    println(", value: ${listIterator.previous()}")
+}
+```
+#### 可变迭代器
+为了迭代可变集合，于是有了 MutableIterator 来扩展 Iterator 使其具有元素删除函数 remove() 。因此，可以在迭代时从集合中删除元素。除了删除元素， MutableListIterator 还可以在迭代列表时插入和替换元素。
+```kotlin
+val numbers = mutableListOf("one", "two", "three", "four") 
+val mutableIterator = numbers.iterator()
+
+mutableIterator.next()
+mutableIterator.remove()   
+println("After removal: $numbers")
+
+val numbers = mutableListOf("one", "four", "four") 
+val mutableListIterator = numbers.listIterator()
+
+mutableListIterator.next()
+mutableListIterator.add("two")
+mutableListIterator.next()
+mutableListIterator.set("three")   
+println(numbers)
+```
+## 序列
+除了集合之外，Kotlin 标准库还包含另一种容器类型——序列（Sequence<T>）。 序列提供与 Iterable 相同的函数，但实现另一种方法来进行多步骤集合处理。
+
+当 Iterable 的处理包含多个步骤时，它们会优先执行：每个处理步骤完成并返回其结果——中间集合。 在此集合上执行之后的步骤。反过来，序列的多步处理在可能的情况下会延迟执行：仅当请求整个处理链的结果时才进行实际计算。
+
+操作执行的顺序也不同：Sequence 对每个元素逐个执行所有处理步骤。 反过来，Iterable 完成整个集合的每个步骤，然后进行下一步。
+
+因此，这些序列可避免生成中间步骤的结果，从而提高了整个集合处理链的性能。 但是，序列的延迟性质增加了一些开销，这些开销在处理较小的集合或进行更简单的计算时可能很重要。 因此，应该同时考虑使用 Sequence 与 Iterable，并确定在哪种情况更适合。
+
+### 创建序列
+创建一个序列，请调用 sequenceOf() 函数，列出元素作为其参数。
+```kotlin
+val numbersSequence = sequenceOf("four", "three", "two", "one")
+```
+如果已经有一个 Iterable 对象（例如 List 或 Set），则可以通过调用 asSequence() 从而创建一个序列。
+```kotlin
+val numbers = listOf("one", "two", "three", "four")
+val numbersSequence = numbers.asSequence()
+```
+创建序列的另一种方法是通过使用计算其元素的函数来构建序列。 要基于函数构建序列，请调用 generateSequence()。 当提供的函数返回 null 时，序列生成停止。因此，以下示例中的序列是无限的。
+```kotlin
+val oddNumbers = generateSequence(1) { it + 2 } // `it` 是上一个元素
+println(oddNumbers.take(5).toList())
+//println(oddNumbers.count())     // 错误：此序列是无限的。
+
+//要使用 generateSequence() 创建有限序列，请提供一个函数，该函数在需要的最后一个元素之后返回 null。
+val oddNumbersLessThan10 = generateSequence(1) { if (it < 10) it + 2 else null }
+println(oddNumbersLessThan10.count())
+```
+最后，有一个函数可以逐个或按任意大小的组块生成序列元素——sequence() 函数。 此函数采用一个 lambda 表达式，其中包含 yield() 与 yieldAll() 函数的调用。 它们将一个元素返回给序列使用者，并暂停 sequence() 的执行，直到使用者请求下一个元素。 yield() 使用单个元素作为参数；yieldAll() 中可以采用 Iterable 对象、Iterable 或其他 Sequence。yieldAll() 的 Sequence 参数可以是无限的。 当然，这样的调用必须是最后一个：之后的所有调用都永远不会执行。
+```kotlin
+val oddNumbers = sequence {
+    yield(1)
+    yieldAll(listOf(3, 5))
+    yieldAll(generateSequence(7) { it + 2 })
+}
+println(oddNumbers.take(5).toList())
+```
+#### 序列操作
+关于序列操作，根据其状态要求可以分为以下几类：
+- 无状态操作不需要状态，并且可以独立处理每个元素，例如 map() 或 filter()。 无状态操作还可能需要少量常数个状态来处理元素，例如 take() 与 drop()。
+- 有状态操作需要大量状态，通常与序列中元素的数量成比例。
+
+如果序列操作返回延迟生成的另一个序列，则称为中间序列。否则，该操作为末端操作。末端操作的示例为 toList() 或 sum()，只能通过末端操作才能检索序列元素。
+
+序列可以多次迭代；但是，某些序列实现可能会约束自己仅迭代一次。其文档中特别提到了这一点。
+
+### Iterable 与 Sequence 之间的区别
+可查看官方文档[序列处理示例](https://www.kotlincn.net/docs/reference/sequences.html#%E5%BA%8F%E5%88%97%E5%A4%84%E7%90%86%E7%A4%BA%E4%BE%8B)
+
+## 集合操作概述
+集合操作在标准库中以两种方式声明：集合接口的成员函数和扩展函数。
+
+成员函数定义了对于集合类型是必不可少的操作。例如，Collection 包含函数 isEmpty() 来检查其是否为空； List 包含用于对元素进行索引访问的 get()，等等。
+
+创建自己的集合接口实现时，必须实现其成员函数。 为了使新实现的创建更加容易，请使用标准库中集合接口的框架实现：AbstractCollection、AbstractList、AbstractSet、AbstractMap 及其相应可变抽象类。
+
+其他集合操作被声明为扩展函数。这些是过滤、转换、排序和其他集合处理功能。
+
+### 公共操作
+公共操作可用于只读集合与可变集合。 常见操作分为以下几类：
+- [转换](https://www.kotlincn.net/docs/reference/collection-transformations.html)
+- [过滤](https://www.kotlincn.net/docs/reference/collection-filtering.html)
+- [plus 与 minus 操作符](https://www.kotlincn.net/docs/reference/collection-plus-minus.html)
+- [分组](https://www.kotlincn.net/docs/reference/collection-grouping.html)
+- [取集合的一部分](https://www.kotlincn.net/docs/reference/collection-parts.html)
+- [取单个元素](https://www.kotlincn.net/docs/reference/collection-elements.html)
+- [排序](https://www.kotlincn.net/docs/reference/collection-ordering.html)
+- [聚合操作](https://www.kotlincn.net/docs/reference/collection-aggregate.html)
+
+这些操作将返回其结果，而不会影响原始集合。例如，一个过滤操作产生一个新集合，其中包含与过滤匹配的所有元素。 此类操作的结果应存储在变量中，或以其他方式使用。
 ## 协程
 协程，其目的就是用来简化异步编程。
 ### 协程基础
@@ -1327,6 +1491,16 @@ map.mapValues { (key, value) -> "$value!" }
 map.mapValues { (_, value): Map.Entry<Int, String> -> "$value!" }
 map.mapValues { (_, value: String) -> "$value!" }
 ```
+## 注解
+### 注解声明
+注解是将元数据附加到代码的方法。要声明注解，请将 annotation 修饰符放在类的前面：
+```kotlin
+annotation class Fancy
+```
+详细介绍可以查看[官网](https://www.kotlincn.net/docs/reference/annotations.html)
+
+## [反射](https://www.kotlincn.net/docs/reference/reflection.html)
+
 ## 作用域函数
 其目的是在对象的上下文中执行代码块。
 
@@ -1351,3 +1525,6 @@ map.mapValues { (_, value: String) -> "$value!" }
 当在 takeIf 及 takeUnless 之后链式调用其他函数，不要忘记执行空检查或安全调用（?.），因为他们的返回值是可为空的。
 
 相关示例代码可浏览包scopefunction下的kt文件。
+
+## [在 Kotlin 中调用 Java 代码](https://www.kotlincn.net/docs/reference/java-interop.html)
+## [Java 中调用 Kotlin](https://www.kotlincn.net/docs/reference/java-to-kotlin-interop.html)
