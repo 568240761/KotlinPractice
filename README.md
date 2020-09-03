@@ -645,8 +645,8 @@ object NotANumber : Expr()
 
 扩展密封类子类的类（间接继承者）可以放在任何位置，而无需在同一个文件中。
 
-## 泛型
-
+## [泛型](https://www.kotlincn.net/docs/reference/generics.html)
+关于 Kotlin 的泛型介绍也可以看这篇[博文](https://kaixue.io/kotlin-generics/)
 ## 嵌套类
 类可以嵌套在其他类中：
 ```kotlin
